@@ -8,6 +8,7 @@ import os
 import datetime
 from pathlib import Path
 import sys
+import tempfile
 
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
@@ -106,9 +107,59 @@ class PhyloApp:
         input_frame.pack(fill='x', pady=(0, 10))
         
         ttk.Radiobutton(input_frame, text="DNA/Protein Sequences (FASTA)", 
-                       variable=self.option, value='sequences').pack(anchor='w')
+                       variable=self.option, value='sequences',
+                       command=self.toggle_input_type).pack(anchor='w')
         ttk.Radiobutton(input_frame, text="Distance Matrix", 
-                       variable=self.option, value='matrix').pack(anchor='w')
+                       variable=self.option, value='matrix',
+                       command=self.toggle_input_type).pack(anchor='w')
+        
+        # Text input frame for sequences
+        self.sequence_text_frame = ttk.LabelFrame(control_frame, text="Manual Sequence Input", padding=5)
+        self.sequence_text_frame.pack(fill='x', pady=(0, 10))
+        
+        # Add example text for sequences
+        sequence_example = ">Sequence1\nATCGATCGATCG\n>Sequence2\nGCTAGCTAGCTA"
+        
+        self.sequence_text = scrolledtext.ScrolledText(self.sequence_text_frame, height=10, width=50)
+        self.sequence_text.pack(fill='both', expand=True, padx=5, pady=5)
+        self.sequence_text.insert(tk.END, sequence_example)
+        
+        # Add confirmation button for sequence input
+        sequence_button_frame = ttk.Frame(self.sequence_text_frame)
+        sequence_button_frame.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Button(sequence_button_frame, text="✓ Confirm Sequences", 
+                  command=self.confirm_text_input, width=20).pack(side='left', padx=5)
+        ttk.Button(sequence_button_frame, text="Clear", 
+                  command=self.clear_text_input, width=20).pack(side='left', padx=5)
+        
+        # Text input frame for distance matrix
+        self.matrix_text_frame = ttk.LabelFrame(control_frame, text="Manual Distance Matrix Input (Lower Triangular Format)", padding=5)
+        self.matrix_text_frame.pack(fill='x', pady=(0, 10))
+        
+        # Add example text for distance matrix in lower triangular format
+        matrix_example = """Taxon1
+Taxon2 0.5
+Taxon3 0.7 0.3
+Taxon4 0.8 0.4 0.2"""
+        
+        self.matrix_text = scrolledtext.ScrolledText(self.matrix_text_frame, height=10, width=50)
+        self.matrix_text.pack(fill='both', expand=True, padx=5, pady=5)
+        self.matrix_text.insert(tk.END, matrix_example)
+        
+        # Add help text
+        help_text = "Format: Each line contains taxon name followed by distances to previous taxa"
+        help_label = ttk.Label(self.matrix_text_frame, text=help_text, wraplength=400)
+        help_label.pack(padx=5, pady=2)
+        
+        # Add confirmation button for matrix input
+        matrix_button_frame = ttk.Frame(self.matrix_text_frame)
+        matrix_button_frame.pack(fill='x', padx=5, pady=5)
+        
+        ttk.Button(matrix_button_frame, text="✓ Confirm Matrix", 
+                  command=self.confirm_matrix_input, width=20).pack(side='left', padx=5)
+        ttk.Button(matrix_button_frame, text="Clear", 
+                  command=self.clear_matrix_input, width=20).pack(side='left', padx=5)
         
         # File operations
         file_frame = ttk.LabelFrame(control_frame, text="File Operations", padding=5)
@@ -142,6 +193,18 @@ class PhyloApp:
         # Initial info
         self.update_info("Ready to load sequences or distance matrix.")
         
+        # Initialize input type
+        self.toggle_input_type()
+
+    def toggle_input_type(self):
+        """Toggle visibility of input options based on selected type"""
+        if self.option.get() == 'sequences':
+            self.sequence_text_frame.pack(fill='x', pady=(0, 10))
+            self.matrix_text_frame.pack_forget()
+        else:
+            self.sequence_text_frame.pack_forget()
+            self.matrix_text_frame.pack(fill='x', pady=(0, 10))
+
     def create_display_panel(self, parent):
         """
         Create the display panel for tree visualization.
@@ -178,6 +241,115 @@ class PhyloApp:
         self.info_text.see(tk.END)
         self.root.update()
         
+    def confirm_text_input(self):
+        """Process and validate the text input sequences"""
+        text_input = self.sequence_text.get(1.0, tk.END).strip()
+        if not text_input:
+            messagebox.showerror("Error", "Please enter sequences in FASTA format")
+            return
+            
+        try:
+            # Create a temporary file with the text input
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.fasta', delete=False) as temp_file:
+                temp_file.write(text_input)
+                temp_file_path = temp_file.name
+            
+            self.sequences = []
+            self.seq_ids = []
+            
+            for record in SeqIO.parse(temp_file_path, "fasta"):
+                self.sequences.append(str(record.seq))
+                self.seq_ids.append(record.id)
+            
+            os.unlink(temp_file_path)  # Clean up the temporary file
+            
+            if not self.sequences:
+                messagebox.showerror("Error", "No valid sequences found in the input")
+                return
+                
+            self.update_info(f"Successfully loaded {len(self.sequences)} sequences from text input")
+            self.update_info(f"Sequence IDs: {', '.join(self.seq_ids[:5])}{'...' if len(self.seq_ids) > 5 else ''}")
+            messagebox.showinfo("Success", f"Successfully loaded {len(self.sequences)} sequences")
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to parse sequences: {str(e)}")
+            self.update_info(f"Error parsing sequences: {str(e)}")
+
+    def clear_text_input(self):
+        """Clear the text input field"""
+        self.sequence_text.delete(1.0, tk.END)
+        self.sequences = []
+        self.seq_ids = []
+        self.update_info("Text input cleared")
+
+    def confirm_matrix_input(self):
+        """Process and validate the distance matrix input in lower triangular format"""
+        text_input = self.matrix_text.get(1.0, tk.END).strip()
+        if not text_input:
+            messagebox.showerror("Error", "Please enter a distance matrix")
+            return
+            
+        try:
+            # Parse the input
+            lines = text_input.splitlines()
+            if len(lines) < 2:
+                raise ValueError("Matrix must have at least two taxa")
+                
+            # Get taxon names and build matrix
+            self.seq_ids = []
+            matrix = []
+            
+            for i, line in enumerate(lines):
+                parts = line.strip().split()
+                if not parts:
+                    continue
+                    
+                # First part is always the taxon name
+                taxon = parts[0]
+                self.seq_ids.append(taxon)
+                
+                # Get distances
+                distances = [float(x) for x in parts[1:]]
+                
+                # Validate number of distances
+                if len(distances) != i:
+                    raise ValueError(f"Line {i+1}: Expected {i} distance(s) for {taxon}, got {len(distances)}")
+                
+                # Add distances to matrix
+                matrix.append(distances)
+            
+            if len(self.seq_ids) < 2:
+                raise ValueError("Matrix must have at least 2 taxa")
+                
+            # Create full matrix from lower triangular
+            full_matrix = []
+            for i in range(len(self.seq_ids)):
+                row = [0.0] * (i + 1)  # Initialize with zeros
+                for j in range(i):
+                    row[j] = matrix[i][j]
+                full_matrix.append(row)
+            
+            # Create distance matrix
+            self.distance_matrix = DistanceMatrix(self.seq_ids, full_matrix)
+            
+            self.update_info(f"Successfully loaded distance matrix for {len(self.seq_ids)} taxa")
+            self.update_info(f"Taxa: {', '.join(self.seq_ids[:5])}{'...' if len(self.seq_ids) > 5 else ''}")
+            messagebox.showinfo("Success", f"Successfully loaded distance matrix for {len(self.seq_ids)} taxa")
+            
+        except ValueError as e:
+            messagebox.showerror("Error", f"Invalid matrix format: {str(e)}")
+            self.update_info(f"Error parsing distance matrix: {str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to parse distance matrix: {str(e)}")
+            self.update_info(f"Error parsing distance matrix: {str(e)}")
+
+    def clear_matrix_input(self):
+        """Clear the matrix input field"""
+        self.matrix_text.delete(1.0, tk.END)
+        self.distance_matrix = None
+        self.seq_ids = []
+        self.update_info("Matrix input cleared")
+
     def load_file(self):
         """
         Load input data from a file.
