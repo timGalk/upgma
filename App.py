@@ -7,6 +7,23 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import os
 import datetime
 from pathlib import Path
+import sys
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+# Set Biopython data path
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable
+    bio_data_path = get_resource_path('Bio')
+    os.environ['BIO_DATA_PATH'] = bio_data_path
 
 class PhyloApp:
     """

@@ -19,6 +19,14 @@ A Python application for constructing phylogenetic trees using the UPGMA (Unweig
 
 ## Installation
 
+### For Users
+
+1. Download the latest release from the releases page
+2. Extract the ZIP file
+3. Run `UPGMA_Tree_Builder.exe`
+
+### For Developers
+
 1. Ensure you have Python 3.7+ installed
 2. Clone this repository or download the source code
 3. Create and activate a virtual environment (recommended):
@@ -34,12 +42,38 @@ A Python application for constructing phylogenetic trees using the UPGMA (Unweig
    pip install -r requirements.txt
    ```
 
+## Building from Source
+
+To create a standalone executable:
+
+1. Ensure all dependencies are installed:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Run the build script:
+   ```bash
+   python build.py
+   ```
+
+3. The executable will be created in the `dist` directory
+
+### Build Options
+
+The build script (`build.py`) provides several options:
+- Creates a single executable file
+- Includes the README file
+- Adds version information
+- Cleans previous build artifacts
+- Supports custom icons (place `icon.ico` in the project root)
+
 ## Usage
 
 1. Start the application:
    ```bash
    python App.py
    ```
+   Or run the executable directly if built.
 
 2. **Input Data**:
    - Choose input type (sequences or distance matrix)
@@ -105,6 +139,7 @@ Sequence1 Sequence2 Sequence3
 - numpy >= 1.21.0
 - matplotlib >= 3.4.0
 - tk >= 0.1.0
+- pyinstaller >= 5.0.0 (for building)
 
 ## License
 
