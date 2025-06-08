@@ -9,7 +9,31 @@ import datetime
 from pathlib import Path
 
 class PhyloApp:
+    """
+    A graphical application for constructing phylogenetic trees using the UPGMA algorithm.
+    
+    This class provides a user-friendly interface for:
+    - Loading DNA/protein sequences or distance matrices
+    - Computing phylogenetic trees using UPGMA
+    - Visualizing and exporting results
+    
+    Attributes:
+        root (tk.Tk): The main application window
+        sequences (list): List of loaded sequences
+        seq_ids (list): List of sequence identifiers
+        distance_matrix (DistanceMatrix): Loaded distance matrix
+        current_tree (Tree): The generated phylogenetic tree
+        current_figure (Figure): The matplotlib figure for tree visualization
+        option (StringVar): Input type selection (sequences/matrix)
+    """
+    
     def __init__(self, root):
+        """
+        Initialize the PhyloApp application.
+        
+        Args:
+            root (tk.Tk): The main application window
+        """
         self.root = root
         self.root.title("UPGMA Phylogenetic Tree Generator")
         self.root.geometry("1200x800")
@@ -26,6 +50,14 @@ class PhyloApp:
         self.create_widgets()
         
     def create_widgets(self):
+        """
+        Create and arrange all GUI widgets.
+        
+        This method sets up the main application layout including:
+        - Control panel for input and operations
+        - Display panel for tree visualization
+        - Information panel for status updates
+        """
         # Create main container with paned window
         main_paned = ttk.PanedWindow(self.root, orient='horizontal')
         main_paned.pack(fill='both', expand=True, padx=5, pady=5)
@@ -42,6 +74,12 @@ class PhyloApp:
         self.create_display_panel(right_frame)
         
     def create_control_panel(self, parent):
+        """
+        Create the control panel with input options and operation buttons.
+        
+        Args:
+            parent (ttk.Frame): The parent frame for the control panel
+        """
         # Main control frame
         control_frame = ttk.LabelFrame(parent, text="Controls", padding=10)
         control_frame.pack(fill='both', expand=True, padx=5, pady=5)
@@ -88,6 +126,12 @@ class PhyloApp:
         self.update_info("Ready to load sequences or distance matrix.")
         
     def create_display_panel(self, parent):
+        """
+        Create the display panel for tree visualization.
+        
+        Args:
+            parent (ttk.Frame): The parent frame for the display panel
+        """
         # Tree display area
         display_frame = ttk.LabelFrame(parent, text="Phylogenetic Tree", padding=5)
         display_frame.pack(fill='both', expand=True, padx=5, pady=5)
@@ -106,12 +150,25 @@ class PhyloApp:
         self.canvas.draw()
         
     def update_info(self, message):
+        """
+        Update the information panel with a new message.
+        
+        Args:
+            message (str): The message to display
+        """
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
         self.info_text.insert(tk.END, f"[{timestamp}] {message}\n")
         self.info_text.see(tk.END)
         self.root.update()
         
     def load_file(self):
+        """
+        Load input data from a file.
+        
+        Supports:
+        - FASTA files for sequences
+        - Text files for distance matrices
+        """
         file_path = filedialog.askopenfilename(
             title="Select input file",
             filetypes=[
@@ -151,6 +208,12 @@ class PhyloApp:
             self.update_info(f"Error loading file: {str(e)}")
 
     def compute_distance_matrix(self):
+        """
+        Compute pairwise distances between sequences.
+        
+        Returns:
+            DistanceMatrix: A matrix of pairwise distances between sequences
+        """
         self.update_info("Computing pairwise distances...")
         size = len(self.sequences)
         matrix = [[0] * i for i in range(1, size + 1)]
@@ -175,6 +238,12 @@ class PhyloApp:
         return DistanceMatrix(self.seq_ids, matrix)
 
     def generate_tree(self):
+        """
+        Generate a phylogenetic tree using the UPGMA algorithm.
+        
+        The tree is generated either from sequences or a pre-computed distance matrix,
+        depending on the selected input type.
+        """
         try:
             if self.option.get() == 'sequences':
                 if not self.sequences:
@@ -208,6 +277,9 @@ class PhyloApp:
             self.update_info(f"Error generating tree: {str(e)}")
 
     def save_tree_file(self):
+        """
+        Save the current tree in Newick format.
+        """
         if not self.current_tree:
             messagebox.showwarning("Warning", "No tree to save. Generate a tree first.")
             return
@@ -231,6 +303,9 @@ class PhyloApp:
                 messagebox.showerror("Error", f"Failed to save tree: {str(e)}")
 
     def save_image(self):
+        """
+        Save the current tree visualization as an image file.
+        """
         if not self.current_tree:
             messagebox.showwarning("Warning", "No tree to save. Generate a tree first.")
             return
@@ -257,6 +332,9 @@ class PhyloApp:
                 messagebox.showerror("Error", f"Failed to save image: {str(e)}")
 
     def generate_report(self):
+        """
+        Generate a detailed analysis report of the current tree.
+        """
         if not self.current_tree:
             messagebox.showwarning("Warning", "No tree to report on. Generate a tree first.")
             return
@@ -300,6 +378,9 @@ class PhyloApp:
                 messagebox.showerror("Error", f"Failed to save report: {str(e)}")
 
     def save_complete_analysis(self):
+        """
+        Save a complete analysis package including tree file, image, and report.
+        """
         if not self.current_tree:
             messagebox.showwarning("Warning", "No tree to save. Generate a tree first.")
             return
