@@ -1,0 +1,9 @@
+/build/
+/dist/
+/.idea/material_theme_project_new.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/UPGMA.iml
+/UPGMA_Tree_Builder.spec
+/.idea/vcs.xml
